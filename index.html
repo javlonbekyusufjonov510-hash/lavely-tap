@@ -1,0 +1,128 @@
+
+<!DOCTYPE html>
+<html lang="uz">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>LAVELY TAP UC</title>
+<style>
+*{box-sizing:border-box}
+body{
+ margin:0;min-height:100vh;text-align:center;color:white;
+ font-family:Arial;background:radial-gradient(circle at top,#164d80,#061326 70%);
+ padding:25px 15px;
+}
+h2{color:#75caff;letter-spacing:3px}
+.balance{font-size:38px;font-weight:bold;margin:12px}
+.coin{
+ width:235px;height:235px;border-radius:50%;
+ margin:40px auto 25px;
+ display:flex;align-items:center;justify-content:center;
+ background:radial-gradient(circle,#e7faff,#54baff 40%,#0874d5 70%,#063b86);
+ border:9px solid #a5e0ff;
+ box-shadow:0 0 35px #168fff,inset 0 0 25px white;
+ cursor:pointer;user-select:none;
+ transition:transform .1s;
+}
+.coin:active{transform:scale(.92)}
+.coin span{font-size:75px;font-weight:900;color:#0754a0;text-shadow:0 2px 5px white}
+.panel{
+ max-width:400px;margin:18px auto;padding:18px;
+ border-radius:18px;background:#ffffff12;
+ border:1px solid #ffffff25;
+}
+.progress{height:10px;background:#29415e;border-radius:10px;overflow:hidden}
+.fill{height:100%;background:#36b7ff;width:0%}
+button{
+ background:#168bfa;color:white;border:0;border-radius:12px;
+ padding:14px 20px;font-size:16px;font-weight:bold;margin:8px;
+}
+.small{color:#b7d2ed}
+</style>
+</head>
+<body>
+
+<h2>🔥 LAVELY TAP</h2>
+<div class="small">SIZNING UC BALANSINGIZ</div>
+<div class="balance" id="balance">0.0 UC</div>
+
+<div class="coin" onclick="tap()"><span>UC</span></div>
+<div>👆 UC tangasini bosing!</div>
+
+<div class="panel">
+ <div id="count">Bosishlar: 0 / 20</div>
+ <br>
+ <div class="progress"><div class="fill" id="fill"></div></div>
+ <p class="small" id="timer">Har bosishda +0.2 UC</p>
+</div>
+
+<div class="panel">
+ <h3>🎁 REFERAL</h3>
+ <p>Har bir yangi taklif uchun +0.5 UC</p>
+ <button onclick="share()">DO‘STNI TAKLIF QILISH</button>
+</div>
+
+<script>
+let data=JSON.parse(localStorage.getItem("lavely_data")||
+'{"balance":0,"taps":0,"until":0}');
+
+function save(){
+ localStorage.setItem("lavely_data",JSON.stringify(data));
+ render();
+}
+
+function tap(){
+ let now=Date.now();
+
+ if(data.until>now){
+  alert("⏳ 24 soat kutishingiz kerak!");
+  return;
+ }
+
+ if(data.until && data.until<=now){
+  data.taps=0;
+  data.until=0;
+ }
+
+ if(data.taps>=20)return;
+
+ data.taps++;
+ data.balance=Math.round((data.balance+0.2)*10)/10;
+
+ if(data.taps===20)data.until=now+86400000;
+
+ save();
+}
+
+function render(){
+ document.getElementById("balance").textContent=
+ data.balance.toFixed(1)+" UC";
+
+ document.getElementById("count").textContent=
+ "Bosishlar: "+data.taps+" / 20";
+
+ document.getElementById("fill").style.width=
+ (data.taps/20*100)+"%";
+
+ if(data.until>Date.now()){
+  let left=Math.ceil((data.until-Date.now())/1000);
+  let h=Math.floor(left/3600);
+  let m=Math.floor((left%3600)/60);
+  document.getElementById("timer").textContent=
+  "Qayta ochilishiga: "+h+" soat "+m+" daqiqa";
+ }else{
+  document.getElementById("timer").textContent=
+  "Har bosishda +0.2 UC";
+ }
+}
+
+function share(){
+ alert("Referal havolasi Telegram botga ulangandan keyin ishlaydi.");
+}
+
+render();
+setInterval(render,1000);
+</script>
+
+</body>
+</html>
