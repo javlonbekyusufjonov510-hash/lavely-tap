@@ -90,3 +90,16 @@ def balance(data: TelegramData):
         return {"balance": 0, "taps": 0, "cooldown_until": None}
 
     return result.data[0]
+@app.post("/referral")
+def referral(data: TelegramData, referrer_id: int):
+    telegram_id = check_telegram(data.initData)
+
+    result = supabase.rpc(
+        "register_referral",
+        {
+            "p_telegram_id": telegram_id,
+            "p_referrer_id": referrer_id
+        }
+    ).execute()
+
+    return result.data
