@@ -5,95 +5,185 @@
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">
 <title>LAVELY TAP UC</title>
+
 <style>
 *{box-sizing:border-box}
 body{
- margin:0;min-height:100vh;text-align:center;color:white;
- font-family:Arial;background:radial-gradient(circle at top,#164d80,#061326 70%);
- padding:25px 15px;
+ margin:0;min-height:100vh;color:white;text-align:center;
+ font-family:Arial,sans-serif;
+ background:radial-gradient(circle at top,#164d80,#061326 70%);
+ padding:20px 14px 100px;
 }
-h2{color:#75caff;letter-spacing:3px}
+h2{color:#75caff;letter-spacing:2px}
+h3{color:#75caff}
+.small{color:#b7d2ed;font-size:14px}
 .balance{font-size:38px;font-weight:bold;margin:12px}
 .coin{
- width:235px;height:235px;border-radius:50%;margin:35px auto 25px;
+ width:220px;height:220px;border-radius:50%;margin:30px auto;
  display:flex;align-items:center;justify-content:center;
  background:radial-gradient(circle,#e7faff,#54baff 40%,#0874d5 70%,#063b86);
- border:9px solid #a5e0ff;box-shadow:0 0 35px #168fff,inset 0 0 25px white;
+ border:9px solid #a5e0ff;
+ box-shadow:0 0 35px #168fff,inset 0 0 25px white;
  cursor:pointer;user-select:none;transition:transform .1s;
 }
 .coin:active{transform:scale(.92)}
-.coin span{font-size:75px;font-weight:900;color:#0754a0;text-shadow:0 2px 5px white}
+.coin span{font-size:75px;font-weight:900;color:#0754a0}
 .panel{
- max-width:430px;margin:18px auto;padding:18px;border-radius:18px;
- background:#ffffff12;border:1px solid #ffffff25;
+ max-width:430px;margin:18px auto;padding:18px;
+ border-radius:18px;background:#ffffff12;
+ border:1px solid #ffffff25;
 }
-.small{color:#b7d2ed;font-size:14px}
 .progress{height:10px;background:#29415e;border-radius:10px;overflow:hidden}
 .fill{height:100%;background:#36b7ff;width:0%}
 button{
  background:#168bfa;color:white;border:0;border-radius:12px;
- padding:13px 17px;font-size:15px;font-weight:bold;margin:6px;cursor:pointer;
-}
-input{
- width:100%;padding:13px;margin:7px 0;border:1px solid #ffffff30;
- border-radius:10px;background:#102b48;color:white;font-size:15px;
+ padding:13px 17px;font-size:14px;font-weight:bold;
+ margin:6px;cursor:pointer;
 }
 .package,.player,.mission{
- background:#ffffff10;border:1px solid #ffffff20;border-radius:12px;
- padding:13px;margin:9px 0;
+ background:#ffffff10;border:1px solid #ffffff20;
+ border-radius:12px;padding:13px;margin:9px 0;
 }
 .package{display:flex;justify-content:space-between;align-items:center;gap:8px}
-.cardnumber{background:#09213b;padding:15px;border-radius:12px;font-size:20px;font-weight:bold;overflow-wrap:anywhere}
+.cardnumber{
+ background:#09213b;padding:15px;border-radius:12px;
+ font-size:20px;font-weight:bold;overflow-wrap:anywhere;
+}
 .status{color:#ffd36a;font-size:13px}
+input{
+ width:100%;padding:13px;margin:7px 0;
+ border:1px solid #ffffff30;border-radius:10px;
+ background:#102b48;color:white;font-size:15px;
+}
 #message{margin:12px;color:#9de0ff;white-space:pre-wrap}
+
+.page{display:none}
+.page.active{display:block}
+
+.bottom-menu{
+ position:fixed;bottom:0;left:0;width:100%;
+ display:flex;justify-content:space-around;align-items:center;
+ background:#071a30;border-top:1px solid #ffffff30;
+ padding:9px 3px calc(9px + env(safe-area-inset-bottom));
+ z-index:100;
+}
+.nav-btn{
+ flex:1;background:transparent;color:#9bb9d8;
+ border:0;border-radius:10px;padding:8px 1px;
+ margin:0 2px;font-size:10px;font-weight:bold;
+ display:flex;flex-direction:column;align-items:center;gap:5px;
+}
+.nav-btn .emoji{font-size:21px}
+.nav-btn.active{background:#168bfa;color:white}
+.profile-item{
+ background:#ffffff10;border-radius:12px;
+ padding:14px;margin:10px 0;text-align:left;
+ display:flex;justify-content:space-between;gap:10px;
+}
+.profile-item span:first-child{color:#b7d2ed}
 </style>
 </head>
+
 <body>
 
-<h2>🔥 LAVELY TAP</h2>
-<div class="small">SIZNING UC BALANSINGIZ</div>
-<div class="balance" id="balance">0.0 UC</div>
+<!-- ASOSIY -->
+<div id="home" class="page active">
+ <h2>🔥 LAVELY TAP</h2>
+ <div class="small">SIZNING UC BALANSINGIZ</div>
+ <div class="balance" id="balance">0.0 UC</div>
 
-<div class="coin" onclick="tap()"><span>UC</span></div>
-<div>👆 UC tangasini bosing!</div>
+ <div class="coin" onclick="tap()"><span>UC</span></div>
+ <div>👆 UC tangasini bosing!</div>
 
-<div class="panel">
- <div id="count">Bosishlar: 0 / 20</div><br>
- <div class="progress"><div class="fill" id="fill"></div></div>
- <p class="small" id="timer">Har bosishda +0.2 UC</p>
+ <div class="panel">
+  <div id="count">Bosishlar: 0 / 20</div><br>
+  <div class="progress"><div class="fill" id="fill"></div></div>
+  <p class="small" id="timer">Har bosishda +0.2 UC</p>
+ </div>
 </div>
 
-<div class="panel">
- <h3>🏆 TOP 10 O‘YINCHILAR</h3>
- <div id="leaderboard">Yuklanmoqda...</div>
- <button onclick="loadLeaderboard()">YANGILASH</button>
+<!-- VAZIFALAR -->
+<div id="missionsPage" class="page">
+ <div class="panel">
+  <h2>🎯 VAZIFALAR</h2>
+  <p class="small">Vazifalarni bajaring va mukofotlarga ega bo‘ling!</p>
+  <div id="missions">Yuklanmoqda...</div>
+ </div>
 </div>
 
-<div class="panel">
- <h3>🛒 UC DO‘KONI</h3>
- <div id="packages"></div>
+<!-- UC DO‘KON -->
+<div id="shop" class="page">
+ <div class="panel">
+  <h2>🛒 UC DO‘KONI</h2>
+  <p class="small">O‘zingizga kerakli UC paketini tanlang</p>
+  <div id="packages"></div>
+ </div>
+
+ <div class="panel">
+  <h3>💳 UZCARD / HUMO</h3>
+  <div class="cardnumber" id="cardNumber"></div>
+  <p id="cardName" class="small"></p>
+  <button onclick="copyCard()">KARTA RAQAMINI NUSXALASH</button>
+  <p class="status">To‘lovdan so‘ng buyurtma yuboring.</p>
+ </div>
 </div>
 
-<div class="panel">
- <h3>💳 UZCARD / HUMO</h3>
- <div class="cardnumber" id="cardNumber">KARTA RAQAMI KIRITILADI</div>
- <p id="cardName" class="small"></p>
- <button onclick="copyCard()">KARTA RAQAMINI NUSXALASH</button>
- <p class="status">To‘lovdan so‘ng buyurtma yuboring.</p>
+<!-- TOP 10 -->
+<div id="top" class="page">
+ <div class="panel">
+  <h2>🏆 TOP 10 O‘YINCHILAR</h2>
+  <div id="leaderboard">Yuklanmoqda...</div>
+  <button onclick="loadLeaderboard()">YANGILASH</button>
+ </div>
 </div>
 
-<div class="panel">
- <h3>🎯 VAZIFALAR</h3>
- <div id="missions">Yuklanmoqda...</div>
-</div>
+<!-- PROFIL -->
+<div id="profile" class="page">
+ <div class="panel">
+  <h2>👤 MENING PROFILIM</h2>
+  <div class="profile-item">
+   <span>Telegram ID</span>
+   <strong id="telegramId">—</strong>
+  </div>
+  <div class="profile-item">
+   <span>UC balansim</span>
+   <strong id="profileBalance">0.0 UC</strong>
+  </div>
+  <div class="profile-item">
+   <span>Jami bosishlar</span>
+   <strong id="profileTaps">0</strong>
+  </div>
+  <div class="profile-item">
+   <span>Taklif qilingan do‘stlar</span>
+   <strong id="profileReferrals">0</strong>
+  </div>
 
-<div class="panel">
- <h3>🎁 REFERAL</h3>
- <p class="small">Do‘stlaringizni taklif qiling!</p>
- <button onclick="share()">DO‘STNI TAKLIF QILISH</button>
+  <h3>🎁 DO‘ST TAKLIF QILISH</h3>
+  <p class="small">Do‘stlaringizni taklif qiling!</p>
+  <button onclick="share()">TAKLIF HAVOLASINI ULASHISH</button>
+ </div>
 </div>
 
 <div id="message"></div>
+
+<!-- PASTKI MENYU -->
+<div class="bottom-menu">
+ <button class="nav-btn active" onclick="showPage('home',this)">
+  <span class="emoji">🏠</span>ASOSIY
+ </button>
+ <button class="nav-btn" onclick="showPage('missionsPage',this)">
+  <span class="emoji">🎯</span>VAZIFALAR
+ </button>
+ <button class="nav-btn" onclick="showPage('shop',this)">
+  <span class="emoji">🛒</span>UC DO‘KON
+ </button>
+ <button class="nav-btn" onclick="showPage('top',this)">
+  <span class="emoji">🏆</span>TOP 10
+ </button>
+ <button class="nav-btn" onclick="showPage('profile',this)">
+  <span class="emoji">👤</span>PROFIL
+ </button>
+</div>
 
 <script>
 // KARTA MA'LUMOTLARI
@@ -101,6 +191,7 @@ const CARD_NUMBER = "5614 6827 1051 3310";
 const CARD_NAME = "JAVLONBEK YUSUFJONOV";
 
 const API = "https://lavely-tap.onrender.com";
+
 const tg = window.Telegram && window.Telegram.WebApp
  ? window.Telegram.WebApp : null;
 
@@ -121,57 +212,104 @@ const packages = [
 
 let currentBalance = 0;
 let currentTaps = 0;
+let currentReferrals = 0;
 let cooldownUntil = null;
+
+function showPage(id,button){
+ document.querySelectorAll(".page").forEach(p=>{
+  p.classList.remove("active");
+ });
+
+ document.getElementById(id).classList.add("active");
+
+ document.querySelectorAll(".nav-btn").forEach(b=>{
+  b.classList.remove("active");
+ });
+
+ button.classList.add("active");
+ document.getElementById("message").textContent="";
+
+ if(id==="top") loadLeaderboard();
+ if(id==="missionsPage") loadMissions();
+ if(id==="profile") loadBalance();
+}
 
 function money(value){
  return Number(value).toLocaleString("uz-UZ")+" so‘m";
 }
 
 function message(text){
- document.getElementById("message").textContent = text;
+ document.getElementById("message").textContent=text;
 }
 
 async function request(endpoint,body={}){
  if(!initData) throw new Error("Telegram bot ichidan PLAY orqali kiring.");
 
- const response = await fetch(API+endpoint,{
+ const response=await fetch(API+endpoint,{
   method:"POST",
   headers:{"Content-Type":"application/json"},
   body:JSON.stringify({initData,...body})
  });
 
- const result = await response.json();
- if(!response.ok) throw new Error(result.detail || "Server xatosi");
+ const result=await response.json();
+
+ if(!response.ok){
+  throw new Error(result.detail || "Server xatosi");
+ }
+
  return result;
 }
 
 async function loadBalance(){
  try{
-  const data = await request("/balance");
-  currentBalance = Number(data.balance || 0);
-  currentTaps = Number(data.taps || 0);
-  cooldownUntil = data.cooldown_until;
+  const data=await request("/balance");
+
+  currentBalance=Number(data.balance || 0);
+  currentTaps=Number(data.taps || 0);
+  currentReferrals=Number(data.referral_count || 0);
+  cooldownUntil=data.cooldown_until;
+
   render();
- }catch(e){message(e.message);}
+
+ }catch(e){
+  message(e.message);
+ }
 }
 
 function render(){
- document.getElementById("balance").textContent =
+ document.getElementById("balance").textContent=
   currentBalance.toFixed(1)+" UC";
 
- document.getElementById("count").textContent =
+ document.getElementById("count").textContent=
   "Bosishlar: "+currentTaps+" / 20";
 
- document.getElementById("fill").style.width =
+ document.getElementById("fill").style.width=
   Math.min(currentTaps/20*100,100)+"%";
 
+ document.getElementById("profileBalance").textContent=
+  currentBalance.toFixed(1)+" UC";
+
+ document.getElementById("profileTaps").textContent=currentTaps;
+
+ document.getElementById("profileReferrals").textContent=
+  currentReferrals;
+
+ if(tg && tg.initDataUnsafe && tg.initDataUnsafe.user){
+  document.getElementById("telegramId").textContent=
+   tg.initDataUnsafe.user.id;
+ }
+
  if(cooldownUntil && new Date(cooldownUntil).getTime()>Date.now()){
-  let left=Math.ceil((new Date(cooldownUntil).getTime()-Date.now())/1000);
-  document.getElementById("timer").textContent =
+  let left=Math.ceil(
+   (new Date(cooldownUntil).getTime()-Date.now())/1000
+  );
+
+  document.getElementById("timer").textContent=
    "Qayta ochilishiga: "+Math.floor(left/3600)+" soat "+
    Math.floor((left%3600)/60)+" daqiqa";
  }else{
-  document.getElementById("timer").textContent="Har bosishda +0.2 UC";
+  document.getElementById("timer").textContent=
+   "Har bosishda +0.2 UC";
  }
 }
 
@@ -179,18 +317,20 @@ async function tap(){
  try{
   await request("/tap");
   await loadBalance();
- }catch(e){message(e.message);}
+ }catch(e){
+  message(e.message);
+ }
 }
 
 function showCard(){
- document.getElementById("cardNumber").textContent = CARD_NUMBER;
- document.getElementById("cardName").textContent = CARD_NAME;
+ document.getElementById("cardNumber").textContent=CARD_NUMBER;
+ document.getElementById("cardName").textContent=CARD_NAME;
 }
 
 function copyCard(){
  navigator.clipboard.writeText(CARD_NUMBER)
-  .then(()=>message("Karta raqami nusxalandi!"))
-  .catch(()=>message("Karta raqamini qo‘lda nusxalang."));
+ .then(()=>message("Karta raqami nusxalandi!"))
+ .catch(()=>message("Karta raqamini qo‘lda nusxalang."));
 }
 
 function renderPackages(){
@@ -222,7 +362,10 @@ async function buyPackage(item){
   return;
  }
 
- const receipt=prompt("To‘lov chekidagi tranzaksiya raqamini kiriting:");
+ const receipt=prompt(
+  "To‘lov chekidagi tranzaksiya raqamini kiriting:"
+ );
+
  if(!receipt) return;
 
  if(!confirm(item.uc+" UC uchun "+money(item.price)+
@@ -234,60 +377,88 @@ async function buyPackage(item){
    pubg_id:pubgId.trim(),
    receipt:receipt.trim()
   });
+
   message("Buyurtmangiz qabul qilindi. Tekshiruv kutilmoqda!");
- }catch(e){message(e.message);}
+
+ }catch(e){
+  message(e.message);
+ }
 }
 
 async function loadLeaderboard(){
  const area=document.getElementById("leaderboard");
  area.textContent="Yuklanmoqda...";
+
  try{
   const data=await request("/leaderboard");
   area.innerHTML="";
-  if(!data.players.length){
+
+  if(!data.players || !data.players.length){
    area.textContent="Hozircha o‘yinchilar yo‘q.";
    return;
   }
+
   data.players.forEach(p=>{
    const div=document.createElement("div");
    div.className="player";
-   div.textContent=p.rank+". "+p.name+" — "+Number(p.balance).toFixed(1)+" UC";
+   div.textContent=p.rank+". "+p.name+" — "+
+    Number(p.balance).toFixed(1)+" UC";
+
    area.appendChild(div);
   });
- }catch(e){area.textContent=e.message;}
+
+ }catch(e){
+  area.textContent=e.message;
+ }
 }
 
 async function loadMissions(){
  const area=document.getElementById("missions");
+ area.textContent="Yuklanmoqda...";
+
  try{
   const data=await request("/missions");
   area.innerHTML="";
-  if(!data.missions.length){
+
+  if(!data.missions || !data.missions.length){
    area.textContent="Hozircha vazifalar yo‘q.";
    return;
   }
+
   data.missions.forEach(m=>{
    const div=document.createElement("div");
    div.className="mission";
    div.textContent=m.title+" — mukofot "+m.reward+" UC";
    area.appendChild(div);
   });
- }catch(e){area.textContent=e.message;}
+
+ }catch(e){
+  area.textContent=e.message;
+ }
 }
 
 async function registerReferral(){
  if(!initData) return;
+
  const ref=new URLSearchParams(location.search).get("ref");
+
  if(!ref || !/^[0-9]+$/.test(ref)) return;
 
  try{
-  const response=await fetch(API+"/referral?referrer_id="+encodeURIComponent(ref),{
-   method:"POST",
-   headers:{"Content-Type":"application/json"},
-   body:JSON.stringify({initData})
-  });
+  const response=await fetch(
+   API+"/referral?referrer_id="+encodeURIComponent(ref),
+   {
+    method:"POST",
+    headers:{"Content-Type":"application/json"},
+    body:JSON.stringify({initData})
+   }
+  );
+
   if(!response.ok) console.log(await response.text());
- }catch(e){console.log(e);}
+
+ }catch(e){
+  console.log(e);
+ }
 }
 
 function share(){
@@ -295,27 +466,30 @@ function share(){
   message("Telegram bot ichidan kiring.");
   return;
  }
+
  const id=tg.initDataUnsafe.user.id;
  const link="https://t.me/LAVELYUC_BOT?start="+id;
- const shareLink="https://t.me/share/url?url="+encodeURIComponent(link);
+
+ const shareLink=
+  "https://t.me/share/url?url="+encodeURIComponent(link);
+
  tg.openTelegramLink(shareLink);
 }
 
 async function start(){
  showCard();
  renderPackages();
+
  if(!initData){
   message("Bot ichidan PLAY orqali o‘yinni oching.");
   return;
  }
+
  await registerReferral();
  await loadBalance();
- await loadLeaderboard();
- await loadMissions();
 }
 
 start();
-setInterval(render,1000);
 </script>
 
 </body>
