@@ -1,93 +1,609 @@
 
-ALTER TABLE public.missions
-ADD COLUMN IF NOT EXISTS mission_type TEXT DEFAULT 'telegram',
-ADD COLUMN IF NOT EXISTS url TEXT,
-ADD COLUMN IF NOT EXISTS chat_id TEXT;
+<!DOCTYPE html>
+<html lang="uz">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>LAVELY TAP UC</title>
+<script src="https://telegram.org/js/telegram-web-app.js"></script>
 
-CREATE TABLE IF NOT EXISTS public.mission_claims (
-    telegram_id BIGINT NOT NULL,
-    mission_id BIGINT NOT NULL REFERENCES public.missions(id),
-    claimed_at TIMESTAMPTZ DEFAULT NOW(),
-    PRIMARY KEY (telegram_id, mission_id)
-);
+<style>
+*{box-sizing:border-box}
+body{
+ margin:0;min-height:100vh;color:white;text-align:center;
+ font-family:Arial,sans-serif;
+ background:radial-gradient(circle at top,#164d80,#061326 70%);
+ padding:20px 14px 100px;
+}
+h2{color:#75caff;letter-spacing:2px}
+h3{color:#75caff}
+.small{color:#b7d2ed;font-size:14px}
+.balance{font-size:38px;font-weight:bold;margin:12px}
+.coin{
+ width:220px;height:220px;border-radius:50%;margin:30px auto;
+ display:flex;align-items:center;justify-content:center;
+ background:radial-gradient(circle,#e7faff,#54baff 40%,#0874d5 70%,#063b86);
+ border:9px solid #a5e0ff;
+ box-shadow:0 0 35px #168fff,inset 0 0 25px white;
+ cursor:pointer;user-select:none;transition:transform .1s;
+}
+.coin:active{transform:scale(.92)}
+.coin span{font-size:75px;font-weight:900;color:#0754a0}
+.coin.disabled{opacity:.5;pointer-events:none}
+.panel{
+ max-width:430px;margin:18px auto;padding:18px;
+ border-radius:18px;background:#ffffff12;
+ border:1px solid #ffffff25;
+}
+.progress{height:10px;background:#29415e;border-radius:10px;overflow:hidden}
+.fill{height:100%;background:#36b7ff;width:0%}
+button{
+ background:#168bfa;color:white;border:0;border-radius:12px;
+ padding:13px 17px;font-size:14px;font-weight:bold;
+ margin:6px;cursor:pointer;
+}
+button:disabled{opacity:.5;cursor:not-allowed}
+.package,.player,.mission{
+ background:#ffffff10;border:1px solid #ffffff20;
+ border-radius:12px;padding:13px;margin:9px 0;
+}
+.package{display:flex;justify-content:space-between;align-items:center;gap:8px}
+.cardnumber{
+ background:#09213b;padding:15px;border-radius:12px;
+ font-size:20px;font-weight:bold;overflow-wrap:anywhere;
+}
+.status{color:#ffd36a;font-size:13px}
+input{
+ width:100%;padding:13px;margin:7px 0;
+ border:1px solid #ffffff30;border-radius:10px;
+ background:#102b48;color:white;font-size:15px;
+}
+#message{margin:12px;color:#9de0ff;white-space:pre-wrap}
+.page{display:none}
+.page.active{display:block}
+.bottom-menu{
+ position:fixed;bottom:0;left:0;width:100%;
+ display:flex;justify-content:space-around;align-items:center;
+ background:#071a30;border-top:1px solid #ffffff30;
+ padding:9px 3px calc(9px + env(safe-area-inset-bottom));
+ z-index:100;
+}
+.nav-btn{
+ flex:1;background:transparent;color:#9bb9d8;
+ border:0;border-radius:10px;padding:8px 1px;
+ margin:0 2px;font-size:10px;font-weight:bold;
+ display:flex;flex-direction:column;align-items:center;gap:5px;
+}
+.nav-btn .emoji{font-size:21px}
+.nav-btn.active{background:#168bfa;color:white}
+.profile-item{
+ background:#ffffff10;border-radius:12px;
+ padding:14px;margin:10px 0;text-align:left;
+ display:flex;justify-content:space-between;gap:10px;
+}
+.profile-item span:first-child{color:#b7d2ed}
+.mission-title{font-weight:bold;color:#fff;margin-bottom:7px}
+.mission-reward{color:#75caff;font-size:14px;margin:7px}
+.mission-actions{display:flex;justify-content:center;flex-wrap:wrap;gap:5px}
+.mission-actions button{min-width:125px}
+</style>
+</head>
 
-INSERT INTO public.missions
-(title, reward, active, mission_type, url, chat_id)
-SELECT
-'Telegram kanalga obuna bo‘lish',
-2,
-TRUE,
-'telegram',
-'https://t.me/babylaly_sale',
-'@babylaly_sale'
-WHERE NOT EXISTS (
-    SELECT 1 FROM public.missions
-    WHERE title = 'Telegram kanalga obuna bo‘lish'
-);
+<body>
 
-INSERT INTO public.missions
-(title, reward, active, mission_type, url, chat_id)
-SELECT
-'Instagram sahifaga obuna bo‘lish',
-3,
-FALSE,
-'instagram',
-'https://www.instagram.com/lavely_org/',
-NULL
-WHERE NOT EXISTS (
-    SELECT 1 FROM public.missions
-    WHERE title = 'Instagram sahifaga obuna bo‘lish'
-);
+<div id="home" class="page active">
+ <h2>🔥 LAVELY TAP</h2>
+ <div class="small">SIZNING UC BALANSINGIZ</div>
+ <div class="balance" id="balance">0.0 UC</div>
 
-CREATE OR REPLACE FUNCTION public.claim_mission(
-    p_telegram_id BIGINT,
-    p_mission_id BIGINT
-)
-RETURNS JSONB
-LANGUAGE plpgsql
-SECURITY DEFINER
-SET search_path = public
-AS $$
-DECLARE
-    v_reward NUMERIC;
-    v_rows INTEGER;
-BEGIN
-    SELECT reward INTO v_reward
-    FROM public.missions
-    WHERE id = p_mission_id AND active = TRUE;
+ <div class="coin" id="coin" onclick="tap()"><span>UC</span></div>
+ <div>👆 UC tangasini bosing!</div>
 
-    IF NOT FOUND THEN
-        RAISE EXCEPTION 'Vazifa topilmadi yoki faol emas';
-    END IF;
+ <div class="panel">
+  <div id="count">Bosishlar: 0 / 20</div><br>
+  <div class="progress"><div class="fill" id="fill"></div></div>
+  <p class="small" id="timer">Har bosishda +0.2 UC</p>
+ </div>
+</div>
 
-    INSERT INTO public.players (telegram_id)
-    VALUES (p_telegram_id)
-    ON CONFLICT (telegram_id) DO NOTHING;
+<div id="missionsPage" class="page">
+ <div class="panel">
+  <h2>🎯 VAZIFALAR</h2>
+  <p class="small">Vazifalarni bajaring va mukofotlarga ega bo‘ling!</p>
+  <div id="missions">Yuklanmoqda...</div>
+ </div>
+</div>
 
-    INSERT INTO public.mission_claims (telegram_id, mission_id)
-    VALUES (p_telegram_id, p_mission_id)
-    ON CONFLICT DO NOTHING;
+<div id="shop" class="page">
+ <div class="panel">
+  <h2>🛒 UC DO‘KONI</h2>
+  <p class="small">O‘zingizga kerakli UC paketini tanlang</p>
+  <div id="packages"></div>
+ </div>
 
-    GET DIAGNOSTICS v_rows = ROW_COUNT;
+ <div class="panel">
+  <h3>💳 UZCARD / HUMO</h3>
+  <div class="cardnumber" id="cardNumber"></div>
+  <p id="cardName" class="small"></p>
+  <button onclick="copyCard()">KARTA RAQAMINI NUSXALASH</button>
+  <p class="status">To‘lovdan so‘ng buyurtma yuboring.</p>
+ </div>
+</div>
 
-    IF v_rows = 0 THEN
-        RETURN jsonb_build_object(
-            'success', FALSE,
-            'message', 'Bu vazifa uchun mukofot oldin berilgan'
-        );
-    END IF;
+<div id="top" class="page">
+ <div class="panel">
+  <h2>🏆 TOP 10 O‘YINCHILAR</h2>
+  <div id="leaderboard">Yuklanmoqda...</div>
+  <button onclick="loadLeaderboard()">YANGILASH</button>
+ </div>
+</div>
 
-    UPDATE public.players
-    SET balance = COALESCE(balance, 0) + v_reward
-    WHERE telegram_id = p_telegram_id;
+<div id="profile" class="page">
+ <div class="panel">
+  <h2>👤 MENING PROFILIM</h2>
+  <div class="profile-item">
+   <span>Telegram ID</span>
+   <strong id="telegramId">—</strong>
+  </div>
+  <div class="profile-item">
+   <span>UC balansim</span>
+   <strong id="profileBalance">0.0 UC</strong>
+  </div>
+  <div class="profile-item">
+   <span>Jami bosishlar</span>
+   <strong id="profileTaps">0</strong>
+  </div>
+  <div class="profile-item">
+   <span>Taklif qilingan do‘stlar</span>
+   <strong id="profileReferrals">0</strong>
+  </div>
 
-    RETURN jsonb_build_object(
-        'success', TRUE,
-        'reward', v_reward,
-        'message', 'Mukofot balansingizga qo‘shildi'
-    );
-END;
-$$;
+  <h3>🎁 DO‘ST TAKLIF QILISH</h3>
+  <p class="small">Do‘stlaringizni taklif qiling!</p>
+  <button onclick="share()">TAKLIF HAVOLASINI ULASHISH</button>
+ </div>
+</div>
 
-GRANT EXECUTE ON FUNCTION public.claim_mission(BIGINT, BIGINT)
-TO service_role;
+<div id="message"></div>
+
+<div class="bottom-menu">
+ <button class="nav-btn active" onclick="showPage('home',this)">
+  <span class="emoji">🏠</span>ASOSIY
+ </button>
+ <button class="nav-btn" onclick="showPage('missionsPage',this)">
+  <span class="emoji">🎯</span>VAZIFALAR
+ </button>
+ <button class="nav-btn" onclick="showPage('shop',this)">
+  <span class="emoji">🛒</span>UC DO‘KON
+ </button>
+ <button class="nav-btn" onclick="showPage('top',this)">
+  <span class="emoji">🏆</span>TOP 10
+ </button>
+ <button class="nav-btn" onclick="showPage('profile',this)">
+  <span class="emoji">👤</span>PROFIL
+ </button>
+</div>
+
+<script>
+const CARD_NUMBER = "5614 6827 1051 3310";
+const CARD_NAME = "JAVLONBEK YUSUFJONOV";
+
+const API = "https://lavely-tap.onrender.com";
+
+const tg = window.Telegram && window.Telegram.WebApp
+ ? window.Telegram.WebApp : null;
+
+if(tg){
+ tg.ready();
+ tg.expand();
+}
+
+const initData = tg ? tg.initData : "";
+
+const packages = [
+ {uc:60,price:13000},
+ {uc:120,price:26000},
+ {uc:325,price:70000},
+ {uc:415,price:90000},
+ {uc:660,price:143000},
+ {uc:1800,price:390000},
+ {uc:3850,price:834000},
+ {uc:8100,price:1755000}
+];
+
+let currentBalance = 0;
+let currentTaps = 0;
+let currentReferrals = 0;
+let cooldownUntil = null;
+let tapBusy = false;
+
+function showPage(id,button){
+ document.querySelectorAll(".page").forEach(p=>{
+  p.classList.remove("active");
+ });
+
+ document.getElementById(id).classList.add("active");
+
+ document.querySelectorAll(".nav-btn").forEach(b=>{
+  b.classList.remove("active");
+ });
+
+ button.classList.add("active");
+ message("");
+
+ if(id==="top") loadLeaderboard();
+ if(id==="missionsPage") loadMissions();
+ if(id==="profile") loadBalance();
+}
+
+function money(value){
+ return Number(value).toLocaleString("uz-UZ")+" so‘m";
+}
+
+function message(text){
+ document.getElementById("message").textContent=text;
+}
+
+async function request(endpoint,body={}){
+ if(!initData){
+  throw new Error("Telegram bot ichidan PLAY orqali kiring.");
+ }
+
+ const response=await fetch(API+endpoint,{
+  method:"POST",
+  headers:{"Content-Type":"application/json"},
+  body:JSON.stringify({initData,...body})
+ });
+
+ let result;
+ try{
+  result=await response.json();
+ }catch(e){
+  throw new Error("Serverdan javob kelmadi. Keyinroq urinib ko‘ring.");
+ }
+
+ if(!response.ok){
+  throw new Error(result.detail || "Server xatosi");
+ }
+
+ return result;
+}
+
+async function loadBalance(){
+ try{
+  const data=await request("/balance");
+
+  currentBalance=Number(data.balance || 0);
+  currentTaps=Number(data.taps || 0);
+  currentReferrals=Number(data.referral_count || 0);
+  cooldownUntil=data.cooldown_until;
+
+  render();
+
+ }catch(e){
+  message(e.message);
+ }
+}
+
+function render(){
+ document.getElementById("balance").textContent=
+  currentBalance.toFixed(1)+" UC";
+
+ document.getElementById("count").textContent=
+  "Bosishlar: "+currentTaps+" / 20";
+
+ document.getElementById("fill").style.width=
+  Math.min(currentTaps/20*100,100)+"%";
+
+ document.getElementById("profileBalance").textContent=
+  currentBalance.toFixed(1)+" UC";
+
+ document.getElementById("profileTaps").textContent=currentTaps;
+ document.getElementById("profileReferrals").textContent=currentReferrals;
+
+ if(tg && tg.initDataUnsafe && tg.initDataUnsafe.user){
+  document.getElementById("telegramId").textContent=
+   tg.initDataUnsafe.user.id;
+ }
+
+ const coin=document.getElementById("coin");
+
+ if(cooldownUntil && new Date(cooldownUntil).getTime()>Date.now()){
+  coin.classList.add("disabled");
+
+  let left=Math.ceil(
+   (new Date(cooldownUntil).getTime()-Date.now())/1000
+  );
+
+  document.getElementById("timer").textContent=
+   "Qayta ochilishiga: "+Math.floor(left/3600)+" soat "+
+   Math.floor((left%3600)/60)+" daqiqa";
+ }else{
+  coin.classList.remove("disabled");
+  document.getElementById("timer").textContent=
+   "Har bosishda +0.2 UC";
+ }
+}
+
+async function tap(){
+ if(tapBusy) return;
+
+ tapBusy=true;
+ const coin=document.getElementById("coin");
+ coin.style.opacity="0.6";
+
+ try{
+  const result=await request("/tap");
+
+  if(result.balance!==undefined){
+   currentBalance=Number(result.balance);
+  }
+  if(result.taps!==undefined){
+   currentTaps=Number(result.taps);
+  }
+  if(result.cooldown_until!==undefined){
+   cooldownUntil=result.cooldown_until;
+  }
+
+  render();
+  message("+0.2 UC!");
+
+  if(result.balance===undefined || result.taps===undefined){
+   await loadBalance();
+  }
+
+ }catch(e){
+  message(e.message);
+ }finally{
+  tapBusy=false;
+  coin.style.opacity="1";
+ }
+}
+
+function showCard(){
+ document.getElementById("cardNumber").textContent=CARD_NUMBER;
+ document.getElementById("cardName").textContent=CARD_NAME;
+}
+
+function copyCard(){
+ if(navigator.clipboard && navigator.clipboard.writeText){
+  navigator.clipboard.writeText(CARD_NUMBER)
+  .then(()=>message("Karta raqami nusxalandi!"))
+  .catch(()=>message("Karta raqamini qo‘lda nusxalang."));
+ }else{
+  message("Karta raqamini qo‘lda nusxalang.");
+ }
+}
+
+function renderPackages(){
+ const area=document.getElementById("packages");
+ area.innerHTML="";
+
+ packages.forEach(item=>{
+  const div=document.createElement("div");
+  div.className="package";
+
+  const info=document.createElement("span");
+  info.textContent=item.uc+" UC — "+money(item.price);
+
+  const btn=document.createElement("button");
+  btn.textContent="OLISH";
+  btn.onclick=()=>buyPackage(item);
+
+  div.append(info,btn);
+  area.appendChild(div);
+ });
+}
+
+async function buyPackage(item){
+ const pubgId=prompt("PUBG ID raqamingizni kiriting:");
+ if(!pubgId) return;
+
+ if(!/^[0-9]{5,30}$/.test(pubgId.trim())){
+  message("PUBG ID noto‘g‘ri kiritildi.");
+  return;
+ }
+
+ const receipt=prompt(
+  "To‘lov chekidagi tranzaksiya raqamini kiriting:"
+ );
+
+ if(!receipt) return;
+
+ if(!confirm(item.uc+" UC uchun "+money(item.price)+
+  " to‘lov qildingizmi?")) return;
+
+ try{
+  await request("/order",{
+   package_uc:item.uc,
+   pubg_id:pubgId.trim(),
+   receipt:receipt.trim()
+  });
+
+  message("Buyurtmangiz qabul qilindi. Tekshiruv kutilmoqda!");
+
+ }catch(e){
+  message(e.message);
+ }
+}
+
+async function loadLeaderboard(){
+ const area=document.getElementById("leaderboard");
+ area.textContent="Yuklanmoqda...";
+
+ try{
+  const data=await request("/leaderboard");
+  area.innerHTML="";
+
+  if(!data.players || !data.players.length){
+   area.textContent="Hozircha o‘yinchilar yo‘q.";
+   return;
+  }
+
+  data.players.forEach(p=>{
+   const div=document.createElement("div");
+   div.className="player";
+   div.textContent=p.rank+". "+p.name+" — "+
+    Number(p.balance).toFixed(1)+" UC";
+
+   area.appendChild(div);
+  });
+
+ }catch(e){
+  area.textContent=e.message;
+ }
+}
+
+/* VAZIFALAR */
+
+function openMission(url,type){
+ if(!url){
+  message("Vazifa havolasi topilmadi.");
+  return;
+ }
+
+ try{
+  if(tg){
+   if(type==="telegram"){
+    tg.openTelegramLink(url);
+   }else{
+    tg.openLink(url);
+   }
+  }else{
+   window.open(url,"_blank");
+  }
+ }catch(e){
+  message("Havolani ochib bo‘lmadi.");
+ }
+}
+
+async function claimMission(missionId,button){
+ if(button.disabled) return;
+
+ button.disabled=true;
+ button.textContent="TEKSHIRILMOQDA...";
+
+ try{
+  const result=await request("/claim-mission",{
+   mission_id:missionId
+  });
+
+  if(result.success){
+   message("🎉 Tabriklaymiz! +"+result.reward+" UC balansingizga qo‘shildi!");
+   await loadBalance();
+   await loadMissions();
+  }else{
+   message(result.message || "Mukofot berilmadi.");
+   button.disabled=false;
+   button.textContent="TEKSHIRISH";
+  }
+
+ }catch(e){
+  message(e.message);
+  button.disabled=false;
+  button.textContent="TEKSHIRISH";
+ }
+}
+
+async function loadMissions(){
+ const area=document.getElementById("missions");
+ area.textContent="Yuklanmoqda...";
+
+ try{
+  const data=await request("/missions");
+  area.innerHTML="";
+
+  if(!data.missions || !data.missions.length){
+   area.textContent="Hozircha vazifalar yo‘q.";
+   return;
+  }
+
+  data.missions.forEach(m=>{
+   const div=document.createElement("div");
+   div.className="mission";
+
+   const title=document.createElement("div");
+   title.className="mission-title";
+   title.textContent="🎯 "+m.title;
+
+   const reward=document.createElement("div");
+   reward.className="mission-reward";
+   reward.textContent="Mukofot: +"+m.reward+" UC";
+
+   const actions=document.createElement("div");
+   actions.className="mission-actions";
+
+   const joinBtn=document.createElement("button");
+   joinBtn.textContent="KANALGA OBUNA BO‘LISH";
+   joinBtn.onclick=()=>openMission(m.url,m.mission_type);
+
+   const checkBtn=document.createElement("button");
+   checkBtn.textContent="TEKSHIRISH";
+   checkBtn.onclick=()=>claimMission(m.id,checkBtn);
+
+   actions.append(joinBtn,checkBtn);
+   div.append(title,reward,actions);
+   area.appendChild(div);
+  });
+
+ }catch(e){
+  area.textContent=e.message;
+ }
+}
+
+async function registerReferral(){
+ if(!initData) return;
+
+ const ref=new URLSearchParams(location.search).get("ref");
+
+ if(!ref || !/^[0-9]+$/.test(ref)) return;
+
+ try{
+  const response=await fetch(
+   API+"/referral?referrer_id="+encodeURIComponent(ref),
+   {
+    method:"POST",
+    headers:{"Content-Type":"application/json"},
+    body:JSON.stringify({initData})
+   }
+  );
+
+  if(!response.ok) console.log(await response.text());
+
+ }catch(e){
+  console.log(e);
+ }
+}
+
+function share(){
+ if(!tg || !tg.initDataUnsafe?.user){
+  message("Telegram bot ichidan kiring.");
+  return;
+ }
+
+ const id=tg.initDataUnsafe.user.id;
+ const link="https://t.me/LAVELYUC_BOT?start="+id;
+ const shareLink=
+  "https://t.me/share/url?url="+encodeURIComponent(link);
+
+ tg.openTelegramLink(shareLink);
+}
+
+async function start(){
+ showCard();
+ renderPackages();
+
+ if(!initData){
+  message("Bot ichidan PLAY orqali o‘yinni oching.");
+  return;
+ }
+
+ await registerReferral();
+ await loadBalance();
+}
+
+start();
+</script>
+
+</body>
+</html>
