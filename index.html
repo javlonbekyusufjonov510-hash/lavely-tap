@@ -1,183 +1,134 @@
-
 <!DOCTYPE html>
 <html lang="uz">
 <head>
 <meta charset="UTF-8">
-<meta name="viewport" content="width=device-width, initial-scale=1">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
 <title>LAVELY TAP UC</title>
 <script src="https://telegram.org/js/telegram-web-app.js"></script>
 <style>
-*{box-sizing:border-box}
-body{
- margin:0;min-height:100vh;text-align:center;color:white;
- font-family:Arial;background:radial-gradient(circle at top,#164d80,#061326 70%);
- padding:25px 15px;
+body {
+    margin: 0;
+    padding: 25px;
+    background: #111;
+    color: white;
+    font-family: Arial, sans-serif;
+    text-align: center;
 }
-h2{color:#75caff;letter-spacing:3px}
-.balance{font-size:38px;font-weight:bold;margin:12px}
-.coin{
- width:235px;height:235px;border-radius:50%;
- margin:40px auto 25px;
- display:flex;align-items:center;justify-content:center;
- background:radial-gradient(circle,#e7faff,#54baff 40%,#0874d5 70%,#063b86);
- border:9px solid #a5e0ff;
- box-shadow:0 0 35px #168fff,inset 0 0 25px white;
- cursor:pointer;user-select:none;transition:transform .1s;
+.panel {
+    background: #222;
+    padding: 22px;
+    margin: 18px 0;
+    border-radius: 15px;
 }
-.coin:active{transform:scale(.92)}
-.coin span{font-size:75px;font-weight:900;color:#0754a0}
-.panel{
- max-width:400px;margin:18px auto;padding:18px;
- border-radius:18px;background:#ffffff12;
- border:1px solid #ffffff25;
+h1 { color: #ff4545; }
+button {
+    background: #ff4545;
+    color: white;
+    border: 0;
+    padding: 15px 25px;
+    border-radius: 10px;
+    font-size: 17px;
+    font-weight: bold;
+    width: 100%;
 }
-.progress{height:10px;background:#29415e;border-radius:10px;overflow:hidden}
-.fill{height:100%;background:#36b7ff;width:0%}
-button{
- background:#168bfa;color:white;border:0;border-radius:12px;
- padding:14px 20px;font-size:16px;font-weight:bold;margin:8px;
-}
-.small{color:#b7d2ed}
-#message{color:#ffd36b;min-height:22px}
+#tapButton { height: 100px; font-size: 25px; }
 </style>
 </head>
 <body>
 
-<h2>🔥 LAVELY TAP</h2>
-<div class="small">SIZNING UC BALANSINGIZ</div>
-<div class="balance" id="balance">Yuklanmoqda...</div>
-
-<div class="coin" onclick="tap()"><span>UC</span></div>
-<div>👆 UC tangasini bosing!</div>
+<h1>🔥 LAVELY TAP UC</h1>
 
 <div class="panel">
- <div id="count">Bosishlar: 0 / 20</div>
- <br>
- <div class="progress"><div class="fill" id="fill"></div></div>
- <p class="small" id="timer">Har bosishda +0.2 UC</p>
- <p id="message"></p>
+    <h3>💰 BALANS</h3>
+    <h1 id="balance">0 UC</h1>
+    <button id="tapButton" onclick="tap()">👆 TAP</button>
+    <p id="status">Yuklanmoqda...</p>
 </div>
 
 <div class="panel">
- <h3>🎁 REFERAL</h3>
- <p>Har bir yangi taklif uchun +0.5 UC</p>
- <button onclick="share()">DO‘STNI TAKLIF QILISH</button>
+    <h3>🎁 REFERAL</h3>
+    <p>Har bir yangi taklif uchun +1 UC</p>
+    <button onclick="share()">DO‘STNI TAKLIF QILISH</button>
 </div>
 
 <script>
 const API = "https://lavely-tap.onrender.com";
-
 const tg = window.Telegram.WebApp;
 tg.ready();
 tg.expand();
 
 const initData = tg.initData;
 
-let data = {
- balance: 0,
- taps: 0,
- cooldown_until: null
-};
+async function request(endpoint) {
+    const response = await fetch(API + endpoint, {
+        method: "POST",
+        headers: {"Content-Type": "application/json"},
+        body: JSON.stringify({initData})
+    });
 
-let busy = false;
-
-function message(text){
- document.getElementById("message").textContent = text;
+    if (!response.ok) throw new Error("Server xatosi");
+    return await response.json();
 }
 
-async function request(endpoint){
- const response = await fetch(API + endpoint,{
-  method:"POST",
-  headers:{"Content-Type":"application/json"},
-  body:JSON.stringify({initData:initData})
- });
-
- const result = await response.json();
-
- if(!response.ok){
-  throw new Error(result.detail || "Serverda xatolik");
- }
-
- return result;
+async function loadBalance() {
+    try {
+        const data = await request("/balance");
+        const player = data.data || data;
+        document.getElementById("balance").innerText =
+            (player.balance ?? 0) + " UC";
+        document.getElementById("status").innerText = "O‘yin tayyor!";
+    } catch (e) {
+        document.getElementById("status").innerText =
+            "Balans yuklanmadi. Qayta urinib ko‘ring.";
+    }
 }
 
-async function loadBalance(){
- if(!initData){
-  message("Bot orqali oching!");
-  document.getElementById("balance").textContent="0.0 UC";
-  return;
- }
+async function registerReferral() {
+    const ref = new URLSearchParams(location.search).get("ref");
 
- try{
-  const result = await request("/balance");
-  data.balance = Number(result.balance || 0);
-  data.taps = Number(result.taps || 0);
-  data.cooldown_until = result.cooldown_until;
-  render();
-  message("");
- }catch(error){
-  message(error.message);
- }
+    if (!ref || !/^\d+$/.test(ref) || !initData) return;
+
+    try {
+        await request("/referral?referrer_id=" + encodeURIComponent(ref));
+    } catch (e) {
+        console.log("Referal xatosi:", e);
+    }
 }
 
-async function tap(){
- if(busy)return;
-
- if(!initData){
-  message("O‘yinni Telegram bot orqali oching!");
-  return;
- }
-
- busy=true;
- message("Yuklanmoqda...");
-
- try{
-  await request("/tap");
-  await loadBalance();
- }catch(error){
-  message(error.message);
- }finally{
-  busy=false;
- }
+async function tap() {
+    try {
+        document.getElementById("tapButton").disabled = true;
+        await request("/tap");
+        await loadBalance();
+    } catch (e) {
+        document.getElementById("status").innerText = "Tap amalga oshmadi!";
+    } finally {
+        document.getElementById("tapButton").disabled = false;
+    }
 }
 
-function render(){
- document.getElementById("balance").textContent =
-  data.balance.toFixed(1)+" UC";
+function share() {
+    const userId = tg.initDataUnsafe?.user?.id;
 
- document.getElementById("count").textContent =
-  "Bosishlar: "+data.taps+" / 20";
+    if (!userId) {
+        tg.showAlert("Bot orqali o‘yinni oching!");
+        return;
+    }
 
- document.getElementById("fill").style.width =
-  (data.taps/20*100)+"%";
+    const link = "https://t.me/LAVELYUC_BOT?start=" + userId;
+    const shareUrl = "https://t.me/share/url?url=" +
+        encodeURIComponent(link) +
+        "&text=" + encodeURIComponent("LAVELY TAP UC o‘yiniga qo‘shil!");
 
- const until = data.cooldown_until
-  ? new Date(data.cooldown_until).getTime()
-  : 0;
-
- if(until>Date.now()){
-  let left=Math.ceil((until-Date.now())/1000);
-  let h=Math.floor(left/3600);
-  let m=Math.floor((left%3600)/60);
-  document.getElementById("timer").textContent =
-   "Qayta ochilishiga: "+h+" soat "+m+" daqiqa";
- }else{
-  document.getElementById("timer").textContent =
-   "Har bosishda +0.2 UC";
- }
+    tg.openTelegramLink(shareUrl);
 }
 
-function share(){
- if(tg.initData){
-  tg.showAlert("Referal havolasi hali ulanmagan.");
- }else{
-  alert("Telegram bot orqali oching.");
- }
+async function startGame() {
+    await registerReferral();
+    await loadBalance();
 }
 
-loadBalance();
-setInterval(render,1000);
+startGame();
 </script>
-
 </body>
 </html>
